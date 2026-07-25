@@ -112,6 +112,11 @@ namespace InternetLock.ViewModels
 
         public async Task InitializeAsync()
         {
+            if (!AdministratorService.IsRunAsAdmin())
+            {
+                LastOperationSummary = "CẢNH BÁO: Ứng dụng chưa được cấp quyền Quyền quản trị (Administrator)! Vui lòng chuột phải vào ứng dụng và chọn 'Run as Administrator'.";
+            }
+
             // Ensure password is configured on first run
             if (!_passwordService.IsPasswordSet())
             {

@@ -67,28 +67,61 @@ namespace InternetLock.Services
 
         public async Task<bool> DisableAdapterAsync(NetworkAdapterInfo adapter, CancellationToken cancellationToken = default)
         {
-            if (adapter == null || string.IsNullOrWhiteSpace(adapter.Id) && string.IsNullOrWhiteSpace(adapter.InterfaceDescription))
+            if (adapter == null || (string.IsNullOrWhiteSpace(adapter.Id) && string.IsNullOrWhiteSpace(adapter.InterfaceDescription) && string.IsNullOrWhiteSpace(adapter.Name)))
             {
                 return false;
             }
 
             try
             {
-                string script;
+                // Strategy 1: PowerShell Disable-NetAdapter by Name
+                if (!string.IsNullOrWhiteSpace(adapter.Name))
+                {
+                    var escapedName = EscapePowerShellString(adapter.Name);
+                    var script = $"Disable-NetAdapter -Name \"{escapedName}\" -Confirm:$false";
+                    var result = await RunPowerShellCommandAsync(script, cancellationToken);
+                    if (result.Success)
+                    {
+                        await _logger.LogOperationAsync("DISABLE", adapter.Name, true, "Success via PowerShell -Name");
+                        return true;
+                    }
+                }
+
+                // Strategy 2: PowerShell Disable-NetAdapter by InterfaceGuid
                 if (!string.IsNullOrWhiteSpace(adapter.InterfaceGuid))
                 {
                     var cleanGuid = adapter.InterfaceGuid.Trim('{', '}');
-                    script = $"Disable-NetAdapter -InterfaceGuid '{{{cleanGuid}}}' -Confirm:$false";
-                }
-                else
-                {
-                    var escapedDesc = EscapePowerShellString(adapter.InterfaceDescription);
-                    script = $"Disable-NetAdapter -InterfaceDescription \"{escapedDesc}\" -Confirm:$false";
+                    var script = $"Disable-NetAdapter -InterfaceGuid '{{{cleanGuid}}}' -Confirm:$false";
+                    var result = await RunPowerShellCommandAsync(script, cancellationToken);
+                    if (result.Success)
+                    {
+                        await _logger.LogOperationAsync("DISABLE", adapter.Name, true, "Success via PowerShell -InterfaceGuid");
+                        return true;
+                    }
                 }
 
-                var result = await RunPowerShellCommandAsync(script, cancellationToken);
-                await _logger.LogOperationAsync("DISABLE", adapter.Name, result.Success, result.Error);
-                return result.Success;
+                // Strategy 3: PowerShell Disable-NetAdapter by InterfaceDescription
+                if (!string.IsNullOrWhiteSpace(adapter.InterfaceDescription))
+                {
+                    var escapedDesc = EscapePowerShellString(adapter.InterfaceDescription);
+                    var script = $"Disable-NetAdapter -InterfaceDescription \"{escapedDesc}\" -Confirm:$false";
+                    var result = await RunPowerShellCommandAsync(script, cancellationToken);
+                    if (result.Success)
+                    {
+                        await _logger.LogOperationAsync("DISABLE", adapter.Name, true, "Success via PowerShell -InterfaceDescription");
+                        return true;
+                    }
+                }
+
+                // Strategy 4: Fallback via netsh command
+                if (!string.IsNullOrWhiteSpace(adapter.Name))
+                {
+                    var netshResult = await RunNetshCommandAsync($"interface set interface name=\"{adapter.Name}\" admin=DISABLED", cancellationToken);
+                    await _logger.LogOperationAsync("DISABLE", adapter.Name, netshResult.Success, netshResult.Error);
+                    return netshResult.Success;
+                }
+
+                return false;
             }
             catch (Exception ex)
             {
@@ -99,28 +132,61 @@ namespace InternetLock.Services
 
         public async Task<bool> EnableAdapterAsync(NetworkAdapterInfo adapter, CancellationToken cancellationToken = default)
         {
-            if (adapter == null || string.IsNullOrWhiteSpace(adapter.Id) && string.IsNullOrWhiteSpace(adapter.InterfaceDescription))
+            if (adapter == null || (string.IsNullOrWhiteSpace(adapter.Id) && string.IsNullOrWhiteSpace(adapter.InterfaceDescription) && string.IsNullOrWhiteSpace(adapter.Name)))
             {
                 return false;
             }
 
             try
             {
-                string script;
+                // Strategy 1: PowerShell Enable-NetAdapter by Name
+                if (!string.IsNullOrWhiteSpace(adapter.Name))
+                {
+                    var escapedName = EscapePowerShellString(adapter.Name);
+                    var script = $"Enable-NetAdapter -Name \"{escapedName}\" -Confirm:$false";
+                    var result = await RunPowerShellCommandAsync(script, cancellationToken);
+                    if (result.Success)
+                    {
+                        await _logger.LogOperationAsync("ENABLE", adapter.Name, true, "Success via PowerShell -Name");
+                        return true;
+                    }
+                }
+
+                // Strategy 2: PowerShell Enable-NetAdapter by InterfaceGuid
                 if (!string.IsNullOrWhiteSpace(adapter.InterfaceGuid))
                 {
                     var cleanGuid = adapter.InterfaceGuid.Trim('{', '}');
-                    script = $"Enable-NetAdapter -InterfaceGuid '{{{cleanGuid}}}' -Confirm:$false";
-                }
-                else
-                {
-                    var escapedDesc = EscapePowerShellString(adapter.InterfaceDescription);
-                    script = $"Enable-NetAdapter -InterfaceDescription \"{escapedDesc}\" -Confirm:$false";
+                    var script = $"Enable-NetAdapter -InterfaceGuid '{{{cleanGuid}}}' -Confirm:$false";
+                    var result = await RunPowerShellCommandAsync(script, cancellationToken);
+                    if (result.Success)
+                    {
+                        await _logger.LogOperationAsync("ENABLE", adapter.Name, true, "Success via PowerShell -InterfaceGuid");
+                        return true;
+                    }
                 }
 
-                var result = await RunPowerShellCommandAsync(script, cancellationToken);
-                await _logger.LogOperationAsync("ENABLE", adapter.Name, result.Success, result.Error);
-                return result.Success;
+                // Strategy 3: PowerShell Enable-NetAdapter by InterfaceDescription
+                if (!string.IsNullOrWhiteSpace(adapter.InterfaceDescription))
+                {
+                    var escapedDesc = EscapePowerShellString(adapter.InterfaceDescription);
+                    var script = $"Enable-NetAdapter -InterfaceDescription \"{escapedDesc}\" -Confirm:$false";
+                    var result = await RunPowerShellCommandAsync(script, cancellationToken);
+                    if (result.Success)
+                    {
+                        await _logger.LogOperationAsync("ENABLE", adapter.Name, true, "Success via PowerShell -InterfaceDescription");
+                        return true;
+                    }
+                }
+
+                // Strategy 4: Fallback via netsh command
+                if (!string.IsNullOrWhiteSpace(adapter.Name))
+                {
+                    var netshResult = await RunNetshCommandAsync($"interface set interface name=\"{adapter.Name}\" admin=ENABLED", cancellationToken);
+                    await _logger.LogOperationAsync("ENABLE", adapter.Name, netshResult.Success, netshResult.Error);
+                    return netshResult.Success;
+                }
+
+                return false;
             }
             catch (Exception ex)
             {
@@ -321,6 +387,55 @@ namespace InternetLock.Services
                 {
                     try { process.Kill(); } catch { }
                     return (false, "", "Command timed out after 15 seconds.");
+                }
+
+                bool success = process.ExitCode == 0;
+                return (success, outputBuilder.ToString().Trim(), errorBuilder.ToString().Trim());
+            }
+            catch (Exception ex)
+            {
+                return (false, "", ex.Message);
+            }
+        }
+
+        private async Task<(bool Success, string Output, string Error)> RunNetshCommandAsync(string arguments, CancellationToken cancellationToken)
+        {
+            var psi = new ProcessStartInfo
+            {
+                FileName = "netsh.exe",
+                Arguments = arguments,
+                UseShellExecute = false,
+                RedirectStandardInput = true,
+                RedirectStandardOutput = true,
+                RedirectStandardError = true,
+                CreateNoWindow = true
+            };
+
+            try
+            {
+                using var process = new Process { StartInfo = psi };
+                var outputBuilder = new StringBuilder();
+                var errorBuilder = new StringBuilder();
+
+                process.OutputDataReceived += (_, e) => { if (e.Data != null) outputBuilder.AppendLine(e.Data); };
+                process.ErrorDataReceived += (_, e) => { if (e.Data != null) errorBuilder.AppendLine(e.Data); };
+
+                process.Start();
+                process.StandardInput.Close();
+                process.BeginOutputReadLine();
+                process.BeginErrorReadLine();
+
+                using var cts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+                cts.CancelAfter(5000);
+
+                try
+                {
+                    await process.WaitForExitAsync(cts.Token);
+                }
+                catch (OperationCanceledException)
+                {
+                    try { process.Kill(); } catch { }
+                    return (false, "", "Netsh command timed out after 5 seconds.");
                 }
 
                 bool success = process.ExitCode == 0;
