@@ -25,18 +25,14 @@
                     <ControlTemplate TargetType="ToggleButton">
                         <Border x:Name="SwitchTrack" CornerRadius="25" Background="#334155" Padding="4">
                             <Grid>
-                                <Ellipse x:Name="SwitchThumb" Width="42" Height="42" HorizontalAlignment="Left" Fill="#94A3B8">
-                                    <Ellipse.RenderTransform>
-                                        <TranslateTransform x:Name="ThumbTransform" X="0"/>
-                                    </Ellipse.RenderTransform>
-                                </Ellipse>
+                                <Ellipse x:Name="SwitchThumb" Width="42" Height="42" HorizontalAlignment="Left" Fill="#94A3B8"/>
                             </Grid>
                         </Border>
                         <ControlTemplate.Triggers>
                             <Trigger Property="IsChecked" Value="True">
                                 <Setter TargetName="SwitchTrack" Property="Background" Value="#10B981"/>
                                 <Setter TargetName="SwitchThumb" Property="Fill" Value="#FFFFFF"/>
-                                <Setter TargetName="ThumbTransform" Property="X" Value="50"/>
+                                <Setter TargetName="SwitchThumb" Property="HorizontalAlignment" Value="Right"/>
                             </Trigger>
                             <Trigger Property="IsEnabled" Value="False">
                                 <Setter TargetName="SwitchTrack" Property="Opacity" Value="0.5"/>
