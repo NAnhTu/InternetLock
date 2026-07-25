@@ -227,8 +227,7 @@ namespace InternetLock.Services
                 var interfaces = NetworkInterface.GetAllNetworkInterfaces();
                 foreach (var nic in interfaces)
                 {
-                    bool isEnabled = nic.OperationalStatus != OperationalStatus.Disabled &&
-                                     nic.OperationalStatus != OperationalStatus.Unknown;
+                    bool isEnabled = nic.OperationalStatus == OperationalStatus.Up;
 
                     string adapterType = nic.NetworkInterfaceType switch
                     {
@@ -261,9 +260,9 @@ namespace InternetLock.Services
             return list;
         }
 
-        private static string DetermineAdapterType(string name, string desc, string mediaType, bool? isVirtual)
+        private static string DetermineAdapterType(string? name, string? desc, string? mediaType, bool? isVirtual)
         {
-            var combined = $"{name} {desc} {mediaType}".ToLowerInvariant();
+            var combined = $"{name ?? ""} {desc ?? ""} {mediaType ?? ""}".ToLowerInvariant();
 
             if (combined.Contains("wi-fi") || combined.Contains("wireless") || combined.Contains("wlan") || combined.Contains("802.11"))
                 return "Wi-Fi";
