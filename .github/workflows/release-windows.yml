@@ -1,0 +1,62 @@
+name: Create GitHub Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    name: Build & Release Windows x64
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout Source Code
+        uses: actions/checkout@v4
+
+      - name: Setup .NET 8 SDK
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+
+      - name: Restore Dependencies
+        run: dotnet restore src/InternetLock/InternetLock.csproj
+
+      - name: Publish Windows x64 App
+        shell: powershell
+        run: |
+          Write-Host "Publishing InternetLock for win-x64 release tag..."
+          dotnet publish "src/InternetLock/InternetLock.csproj" `
+            --configuration Release `
+            --runtime win-x64 `
+            --self-contained true `
+            -p:PublishSingleFile=true `
+            -p:IncludeNativeLibrariesForSelfExtract=true `
+            -p:DebugType=None `
+            -p:DebugSymbols=false `
+            --output "publish/win-x64"
+
+      - name: Compress Publish Directory to ZIP
+        shell: powershell
+        run: |
+          $publishDir = "publish/win-x64"
+          $zipName = "InternetLock-${{ github.ref_name }}-win-x64.zip"
+          
+          if (-not (Test-Path $publishDir)) {
+              Write-Error "Publish directory '$publishDir' does not exist."
+              exit 1
+          }
+
+          Write-Host "Creating release package: $zipName..."
+          Compress-Archive -Path "$publishDir\*" -DestinationPath $zipName -Force
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: InternetLock-*-win-x64.zip
+          draft: false
+          prerelease: false
+          generate_release_notes: true

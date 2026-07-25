@@ -1,0 +1,39 @@
+# Visual Studio & Rider
+.vs/
+.idea/
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+
+# Build & Publish outputs
+bin/
+obj/
+artifacts/
+publish/
+[Bb]in/
+[Oo]bj/
+[Aa]rtifacts/
+[Pp]ublish/
+
+# GitHub Actions artifacts
+*.zip
+
+# Logs & AppData local files
+*.log
+adapter-state.json
+password.dat
+Logs/
+
+# Certificates, Keys & Secrets
+*.pfx
+*.p12
+*.key
+*.snk
+*.pem
+appsettings.Development.json
+appsettings.Local.json
+
+# Operating System files
+.DS_Store
+Thumbs.db

@@ -1,0 +1,77 @@
+name: Build Windows Desktop App
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: Build & Package Windows x64
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout Source Code
+        uses: actions/checkout@v4
+
+      - name: Setup .NET 8 SDK
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+
+      - name: Restore Dependencies
+        run: dotnet restore src/InternetLock/InternetLock.csproj
+
+      - name: Publish Windows x64 App
+        shell: powershell
+        run: |
+          Write-Host "Publishing InternetLock for win-x64..."
+          dotnet publish "src/InternetLock/InternetLock.csproj" `
+            --configuration Release `
+            --runtime win-x64 `
+            --self-contained true `
+            -p:PublishSingleFile=true `
+            -p:IncludeNativeLibrariesForSelfExtract=true `
+            -p:DebugType=None `
+            -p:DebugSymbols=false `
+            --output "publish/win-x64"
+
+      - name: Verify Build Output and Create ZIP Archive
+        shell: powershell
+        run: |
+          $publishDir = "publish/win-x64"
+          $exePath = Join-Path $publishDir "InternetLock.exe"
+          
+          if (-not (Test-Path $publishDir)) {
+              Write-Error "Publish directory '$publishDir' does not exist."
+              exit 1
+          }
+
+          if (-not (Test-Path $exePath)) {
+              Write-Warning "Single-file executable '$exePath' was not found directly. Checking folder publish output..."
+              $files = Get-ChildItem -Path $publishDir
+              if ($files.Count -eq 0) {
+                  Write-Error "Publish directory is empty!"
+                  exit 1
+              }
+          }
+
+          Write-Host "Compressing publish directory to InternetLock-win-x64.zip..."
+          Compress-Archive -Path "$publishDir\*" -DestinationPath "InternetLock-win-x64.zip" -Force
+
+          if (-not (Test-Path "InternetLock-win-x64.zip")) {
+              Write-Error "Failed to generate InternetLock-win-x64.zip"
+              exit 1
+          }
+
+      - name: Upload Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: InternetLock-win-x64
+          path: InternetLock-win-x64.zip
+          retention-days: 30
