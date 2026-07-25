@@ -15,7 +15,7 @@ namespace InternetLock.Services
     public class NetworkAdapterService : INetworkAdapterService
     {
         private readonly ILoggerService _logger;
-        private const int CommandTimeoutMs = 15000; // 15s per PowerShell command
+        private const int CommandTimeoutMs = 5000; // 5s timeout per PowerShell command for fast UI fallback
 
         public NetworkAdapterService(ILoggerService logger)
         {
@@ -291,8 +291,9 @@ namespace InternetLock.Services
             var psi = new ProcessStartInfo
             {
                 FileName = "powershell.exe",
-                Arguments = $"-NoProfile -NonInteractive -ExecutionPolicy Bypass -Command \"{script}\"",
+                Arguments = $"-NoProfile -NonInteractive -NoLogo -ExecutionPolicy Bypass -Command \"{script}\"",
                 UseShellExecute = false,
+                RedirectStandardInput = true,
                 RedirectStandardOutput = true,
                 RedirectStandardError = true,
                 CreateNoWindow = true
@@ -308,6 +309,7 @@ namespace InternetLock.Services
                 process.ErrorDataReceived += (_, e) => { if (e.Data != null) errorBuilder.AppendLine(e.Data); };
 
                 process.Start();
+                process.StandardInput.Close();
                 process.BeginOutputReadLine();
                 process.BeginErrorReadLine();
 

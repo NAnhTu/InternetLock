@@ -14,6 +14,7 @@
         <converters:StatusToBrushConverter x:Key="StatusToBrushConverter"/>
         <converters:NullToVisibilityConverter x:Key="NullToVisibilityConverter"/>
         <converters:InverseBooleanConverter x:Key="InverseBooleanConverter"/>
+        <converters:BooleanToVisibilityConverter x:Key="BooleanToVisibilityConverter"/>
 
         <!-- Custom Large ToggleSwitch Style -->
         <Style x:Key="LargeToggleSwitchStyle" TargetType="ToggleButton">
@@ -200,7 +201,7 @@
         </Grid>
 
         <!-- 6. Busy Progress Overlay -->
-        <Border Grid.RowSpan="5" Background="#CC0F172A" Visibility="{Binding IsBusy, Converter={StaticResource NullToVisibilityConverter}}">
+        <Border Grid.RowSpan="5" Background="#CC0F172A" Visibility="{Binding IsBusy, Converter={StaticResource BooleanToVisibilityConverter}}">
             <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center" Width="300">
                 <TextBlock Text="{Binding BusyMessage}" Foreground="#F8FAFC" FontSize="16" FontWeight="SemiBold" 
                            HorizontalAlignment="Center" Margin="0,0,0,16"/>
