@@ -349,12 +349,28 @@ namespace InternetLock.ViewModels
                             string.Equals(a.InterfaceDescription, state.InterfaceDescription, StringComparison.OrdinalIgnoreCase) ||
                             string.Equals(a.Name, state.AdapterName, StringComparison.OrdinalIgnoreCase));
 
-                        if (match != null)
+                        // Get-NetAdapter normally returns disabled adapters. If a driver or
+                        // Windows API omits one, reconstruct enough identity from the saved
+                        // state so EnableAdapterAsync can still enable it by GUID, name, or
+                        // interface description.
+                        var adapterToEnable = match ?? new NetworkAdapterInfo
                         {
-                            bool success = await _adapterService.EnableAdapterAsync(match);
-                            if (success) succeededList.Add(match.Name);
-                            else failedList.Add(match.Name);
-                        }
+                            Id = state.AdapterId,
+                            Name = state.AdapterName,
+                            Description = state.InterfaceDescription,
+                            InterfaceDescription = state.InterfaceDescription,
+                            InterfaceGuid = state.InterfaceGuid,
+                            IsEnabled = false,
+                            IsManageable = true
+                        };
+
+                        bool success = await _adapterService.EnableAdapterAsync(adapterToEnable);
+                        var displayName = string.IsNullOrWhiteSpace(adapterToEnable.Name)
+                            ? adapterToEnable.InterfaceDescription
+                            : adapterToEnable.Name;
+
+                        if (success) succeededList.Add(displayName);
+                        else failedList.Add(displayName);
                     }
                 }
 

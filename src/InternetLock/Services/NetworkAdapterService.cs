@@ -5,7 +5,6 @@ using System.Linq;
 using System.Net.NetworkInformation;
 using System.Text;
 using System.Text.Json;
-using System.Text.Json.Serialization;
 using System.Threading;
 using System.Threading.Tasks;
 using InternetLock.Models;
@@ -29,7 +28,11 @@ namespace InternetLock.Services
             try
             {
                 // Attempt 1: Retrieve adapters using PowerShell Get-NetAdapter for comprehensive WMI/CIM info
-                var psScript = "Get-NetAdapter | Select-Object Name, InterfaceDescription, InterfaceGuid, InterfaceIndex, Status, AdminStatus, MediaConnectionState, PhysicalMediaType, Virtual | ConvertTo-Json -Compress";
+                // Convert AdminStatus to a stable string explicitly. PowerShell may otherwise
+                // serialize the enum as either a number or a string depending on the host.
+                // Get-NetAdapter includes administratively disabled adapters, which is
+                // essential when the application is restarted while Internet is locked.
+                var psScript = "Get-NetAdapter | Select-Object Name, InterfaceDescription, InterfaceGuid, InterfaceIndex, Status, @{Name='AdminStatus';Expression={$_.AdminStatus.ToString()}}, MediaConnectionState, PhysicalMediaType, Virtual | ConvertTo-Json -Compress";
                 var psResult = await RunPowerShellCommandAsync(psScript, cancellationToken);
 
                 if (psResult.Success && !string.IsNullOrWhiteSpace(psResult.Output))
@@ -254,9 +257,16 @@ namespace InternetLock.Services
 
                 foreach (var dto in rawList)
                 {
-                    bool isEnabled = dto.AdminStatus == 1 ||
-                                     string.Equals(dto.AdminStatusStr, "Up", StringComparison.OrdinalIgnoreCase) ||
-                                     string.Equals(dto.Status, "Up", StringComparison.OrdinalIgnoreCase);
+                    // AdminStatus represents whether the adapter is enabled by Windows.
+                    // Status can be "Disconnected" for an enabled Ethernet/Wi-Fi adapter,
+                    // so it must not be used as the primary enabled/disabled signal.
+                    bool isEnabled = string.Equals(dto.AdminStatus, "Up", StringComparison.OrdinalIgnoreCase);
+
+                    // Compatibility fallback for unexpected/older PowerShell output.
+                    if (string.IsNullOrWhiteSpace(dto.AdminStatus))
+                    {
+                        isEnabled = !string.Equals(dto.Status, "Disabled", StringComparison.OrdinalIgnoreCase);
+                    }
 
                     string connStatus = !string.IsNullOrWhiteSpace(dto.Status) ? dto.Status : (isEnabled ? "Enabled" : "Disabled");
                     string adapterType = DetermineAdapterType(dto.Name, dto.InterfaceDescription, dto.PhysicalMediaType, dto.Virtual);
@@ -454,10 +464,7 @@ namespace InternetLock.Services
             public string? InterfaceGuid { get; set; }
             public int InterfaceIndex { get; set; }
             public string? Status { get; set; }
-            public int? AdminStatus { get; set; }
-
-            [JsonPropertyName("AdminStatus")]
-            public string? AdminStatusStr { get; set; }
+            public string? AdminStatus { get; set; }
             public string? PhysicalMediaType { get; set; }
             public bool? Virtual { get; set; }
         }
